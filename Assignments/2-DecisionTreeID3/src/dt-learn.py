@@ -7,7 +7,7 @@ from pprint import pprint
 
 # Importing dataset
 def import_data(dataset_arff):
-    data, meta = arff.loadarff('../' + dataset_arff)
+    data, meta = arff.loadarff('../dataset/' + dataset_arff)
     return pd.DataFrame(data), meta
 
 
