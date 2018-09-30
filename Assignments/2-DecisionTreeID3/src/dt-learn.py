@@ -93,8 +93,10 @@ def dt_learn_id3(dataset, metadata, features, target_attribute, current_max_clas
                          for feature in numeric_features]
     # print info_gain_numeric
 
-    best_feature = nominal_features[np.argmax(info_gain_values)]
-    best_feature_numeric = numeric_features[np.argmax([info_gain[0] for info_gain in info_gain_numeric])]
+    if info_gain_values is not None and len(info_gain_values) > 0:
+        best_feature = nominal_features[np.argmax(info_gain_values)]
+    if info_gain_numeric is not None and len(info_gain_numeric) > 0:
+        best_feature_numeric = numeric_features[np.argmax([info_gain[0] for info_gain in info_gain_numeric])]
     # print best_feature_numeric, info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])]
     # print best_feature, info_gain_values[np.argmax(info_gain_values)]
 
@@ -129,6 +131,27 @@ def dt_learn_id3(dataset, metadata, features, target_attribute, current_max_clas
     return tree
 
 
+def print_tree(root, metadata, depth=0):
+    if root is None:
+        return
+    for feature, value in root.items():
+        if isinstance(value, dict):
+            for key, val in value.items():
+                if isinstance(val, dict):
+                    if metadata[feature][0] != 'numeric':
+                        print ('|' + '\t') * depth + str(feature) + ' = ' + str(key)
+                    else:
+                        print ('|' + '\t') * depth + str(feature) + ' ' + str(key)
+                    print_tree(val, metadata, depth + 1)
+                else:
+                    if metadata[feature][0] != 'numeric':
+                        print ('|' + '\t') * depth + str(feature) + ' = ' + str(key) + ': ' + str(val)
+                    else:
+                        print ('|' + '\t') * depth + str(feature) + ' ' + str(key) + ': ' + str(val)
+        else:
+            print ('nnst|' + '\t') * depth + str(feature) + ': ' + str(value)
+
+
 # Driver Code
 def main():
     dataset, metadata = import_data('heart_train.arff')
@@ -139,7 +162,8 @@ def main():
     # print(entropy_num(dataset, metadata, target_attrib, 'age'))
 
     decision_tree = dt_learn_id3(dataset, metadata, features, target_attrib, None)
-    pprint(decision_tree)
+    # pprint(decision_tree)
+    print_tree(decision_tree, metadata)
 
 
 # Calling the main function
