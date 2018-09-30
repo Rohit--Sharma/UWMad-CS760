@@ -100,9 +100,14 @@ def dt_learn_id3(dataset, metadata, features, target_attribute, current_max_clas
     # print best_feature_numeric, info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])]
     # print best_feature, info_gain_values[np.argmax(info_gain_values)]
 
-    best_feature = best_feature if info_gain_values[np.argmax(info_gain_values)] >= \
-                                   info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][
-                                       0] else best_feature_numeric
+    if info_gain_values is not None and len(info_gain_values) > 0 and \
+            info_gain_numeric is not None and len(info_gain_numeric) > 0:
+        best_feature = best_feature if info_gain_values[np.argmax(info_gain_values)] >= \
+                                       info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][
+                                           0] else best_feature_numeric
+    elif info_gain_values is None or not len(info_gain_values):
+        best_feature = best_feature_numeric
+
     # print best_feature_overall, metadata[best_feature_overall][0]
     # print best_feature_numeric, info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][1]
 
@@ -154,7 +159,7 @@ def print_tree(root, metadata, depth=0):
 
 # Driver Code
 def main():
-    dataset, metadata = import_data('heart_train.arff')
+    dataset, metadata = import_data('diabetes_train.arff')
     # features = [feature for feature in metadata.names()[:-1] if metadata[feature][0] != 'numeric']
     features = metadata.names()[:-1]
     target_attrib = metadata.names()[-1]
