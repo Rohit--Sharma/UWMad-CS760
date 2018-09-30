@@ -58,7 +58,9 @@ def entropy_num(samples, meta, target_attribute, attribute=None):
     for split_point in split_points:
         samples_lte = samples[samples[attribute] <= split_point]
         samples_gt = samples[samples[attribute] > split_point]
-        curr_split_entropy = float(len(samples_lte)) / len(samples) * entropy_pds(samples_lte, meta, target_attribute) + float(len(samples_gt)) / len(samples) * entropy_pds(samples_gt, meta, target_attribute)
+        curr_split_entropy = float(len(samples_lte)) / len(samples) * entropy_pds(samples_lte, meta,
+                                                                                  target_attribute) + float(
+            len(samples_gt)) / len(samples) * entropy_pds(samples_gt, meta, target_attribute)
         if curr_split_entropy < result[1]:
             result = (split_point, curr_split_entropy)
     return result
@@ -78,18 +80,51 @@ def dt_learn_id3(dataset, metadata, features, target_attribute, current_max_clas
     # Start growing the tree
     current_max_class = dataset[target_attribute].mode().get(0, 0)
 
+    nominal_features = [feature for feature in features if metadata[feature][0] != 'numeric']
+    numeric_features = [feature for feature in features
+                        if metadata[feature][0] == 'numeric' or metadata[feature][0] == 'real']
+
     info_gain_values = [
         (entropy_pds(dataset, metadata, target_attribute) - entropy_pds(dataset, metadata, target_attribute, feature))
-        for feature in features if metadata[feature][0] != 'numeric']
-    best_feature = features[np.argmax(info_gain_values)]
-    features = [feature for feature in features if feature != best_feature]
+        for feature in nominal_features]
+    info_gain_numeric = [((entropy_pds(dataset, metadata, target_attribute) -
+                           entropy_num(dataset, metadata, target_attribute, feature)[1]),
+                          entropy_num(dataset, metadata, target_attribute, feature)[0])
+                         for feature in numeric_features]
+    # print info_gain_numeric
+
+    best_feature = nominal_features[np.argmax(info_gain_values)]
+    best_feature_numeric = numeric_features[np.argmax([info_gain[0] for info_gain in info_gain_numeric])]
+    # print best_feature_numeric, info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])]
+    # print best_feature, info_gain_values[np.argmax(info_gain_values)]
+
+    best_feature = best_feature if info_gain_values[np.argmax(info_gain_values)] >= \
+                                   info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][
+                                       0] else best_feature_numeric
+    # print best_feature_overall, metadata[best_feature_overall][0]
+    # print best_feature_numeric, info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][1]
+
+    features = [feature for feature in nominal_features if feature != best_feature]
+    features += numeric_features
+    # print features
 
     tree = {best_feature: {}}
 
-    for value in metadata[best_feature][1]:  # dataset[best_feature].unique():
-        sub_dataset = dataset[dataset[best_feature] == value]
-        subtree = dt_learn_id3(sub_dataset, metadata, features, target_attribute, current_max_class)
-        tree[best_feature][value] = subtree
+    if metadata[best_feature][0] == 'nominal':
+        for value in metadata[best_feature][1]:  # dataset[best_feature].unique():
+            sub_dataset = dataset[dataset[best_feature] == value]
+            subtree = dt_learn_id3(sub_dataset, metadata, features, target_attribute, current_max_class)
+            tree[best_feature][value] = subtree
+    elif metadata[best_feature][0] in ['numeric', 'real']:
+        split_val = info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][1]
+
+        sub_dataset_lte = dataset[dataset[best_feature] <= split_val]
+        subtree_lte = dt_learn_id3(sub_dataset_lte, metadata, features, target_attribute, current_max_class)
+        tree[best_feature]['<= ' + str(split_val)] = subtree_lte
+
+        sub_dataset_gt = dataset[dataset[best_feature] > split_val]
+        subtree_gt = dt_learn_id3(sub_dataset_gt, metadata, features, target_attribute, current_max_class)
+        tree[best_feature]['> ' + str(split_val)] = subtree_gt
 
     return tree
 
@@ -97,7 +132,8 @@ def dt_learn_id3(dataset, metadata, features, target_attribute, current_max_clas
 # Driver Code
 def main():
     dataset, metadata = import_data('heart_train.arff')
-    features = [feature for feature in metadata.names()[:-1] if metadata[feature][0] != 'numeric']
+    # features = [feature for feature in metadata.names()[:-1] if metadata[feature][0] != 'numeric']
+    features = metadata.names()[:-1]
     target_attrib = metadata.names()[-1]
 
     # print(entropy_num(dataset, metadata, target_attrib, 'age'))
