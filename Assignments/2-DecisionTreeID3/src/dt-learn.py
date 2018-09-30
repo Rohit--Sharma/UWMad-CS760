@@ -66,12 +66,12 @@ def entropy_num(samples, meta, target_attribute, attribute=None):
     return result
 
 
-def dt_learn_id3(dataset, metadata, features, target_attribute, current_max_class):
+def dt_learn_id3(dataset, m, metadata, features, target_attribute, current_max_class):
     # Stopping criteria:
     if dataset[target_attribute].nunique() == 1:
         # print dataset[target_attribute].unique()
         return dataset[target_attribute].unique()[0]
-    if len(dataset) == 0:
+    if len(dataset) < m or len(dataset) == 0:
         # print 'Reached empty dataset'
         return current_max_class
     if len(features) == 0:
@@ -120,17 +120,17 @@ def dt_learn_id3(dataset, metadata, features, target_attribute, current_max_clas
     if metadata[best_feature][0] == 'nominal':
         for value in metadata[best_feature][1]:  # dataset[best_feature].unique():
             sub_dataset = dataset[dataset[best_feature] == value]
-            subtree = dt_learn_id3(sub_dataset, metadata, features, target_attribute, current_max_class)
+            subtree = dt_learn_id3(sub_dataset, m, metadata, features, target_attribute, current_max_class)
             tree[best_feature][value] = subtree
     elif metadata[best_feature][0] in ['numeric', 'real']:
         split_val = info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][1]
 
         sub_dataset_lte = dataset[dataset[best_feature] <= split_val]
-        subtree_lte = dt_learn_id3(sub_dataset_lte, metadata, features, target_attribute, current_max_class)
+        subtree_lte = dt_learn_id3(sub_dataset_lte, m, metadata, features, target_attribute, current_max_class)
         tree[best_feature]['<= ' + str(split_val)] = subtree_lte
 
         sub_dataset_gt = dataset[dataset[best_feature] > split_val]
-        subtree_gt = dt_learn_id3(sub_dataset_gt, metadata, features, target_attribute, current_max_class)
+        subtree_gt = dt_learn_id3(sub_dataset_gt, m, metadata, features, target_attribute, current_max_class)
         tree[best_feature]['> ' + str(split_val)] = subtree_gt
 
     return tree
@@ -154,21 +154,71 @@ def print_tree(root, metadata, depth=0):
                     else:
                         print ('|' + '\t') * depth + str(feature) + ' ' + str(key) + ': ' + str(val)
         else:
-            print ('nnst|' + '\t') * depth + str(feature) + ': ' + str(value)
+            print ('|' + '\t') * depth + str(feature) + ': ' + str(value)
+
+
+def predict(learned_tree, metadata, testing_query, default=None):
+    # print testing_query
+    if learned_tree is None:
+        return default
+
+    feature = learned_tree.items()[0][0]
+    # print feature
+    val = testing_query[feature]
+    # print val
+
+    if metadata[feature][0] not in ['numeric', 'real']:
+        if isinstance(learned_tree[feature][val], dict):
+            return predict(learned_tree[feature][val], metadata, testing_query, default)
+        else:
+            return learned_tree[feature][val]
+    else:
+        split_val = float(learned_tree[feature].items()[0][0].split()[-1])
+        if val <= split_val:
+            if isinstance(learned_tree[feature]['<= ' + str(split_val)], dict):
+                return predict(learned_tree[feature]['<= ' + str(split_val)], metadata, testing_query, default)
+            else:
+                return learned_tree[feature]['<= ' + str(split_val)]
+        else:
+            if isinstance(learned_tree[feature]['> ' + str(split_val)], dict):
+                return predict(learned_tree[feature]['> ' + str(split_val)], metadata, testing_query, default)
+            else:
+                return learned_tree[feature]['> ' + str(split_val)]
+
+
+def dt_test(decision_tree, metadata):
+    training_set, metadata = import_data('heart_test.arff')
+
+    predicted_vals = [(predict(decision_tree, metadata, training_sample[1], 'default'), training_sample[1][-1])
+                      for training_sample in training_set.iterrows()]
+    correct_preds = 0
+    total_preds = 1
+    for prediction in predicted_vals:
+        print str(total_preds) + ': Actual: ' + prediction[1] + ' Predicted: ' + prediction[0]
+        if prediction[0] == prediction[1]:
+            correct_preds += 1
+        total_preds += 1
+    print 'Number of correctly classified: ' + str(correct_preds) + \
+          ' Total number of test instances: ' + str(len(predicted_vals))
+    print 'Accuracy: ' + str(float(correct_preds) / len(predicted_vals))
 
 
 # Driver Code
 def main():
-    dataset, metadata = import_data('diabetes_train.arff')
+    dataset, metadata = import_data('heart_train.arff')
     # features = [feature for feature in metadata.names()[:-1] if metadata[feature][0] != 'numeric']
     features = metadata.names()[:-1]
     target_attrib = metadata.names()[-1]
 
     # print(entropy_num(dataset, metadata, target_attrib, 'age'))
 
-    decision_tree = dt_learn_id3(dataset, metadata, features, target_attrib, None)
+    decision_tree = dt_learn_id3(dataset, 2, metadata, features, target_attrib, None)
     # pprint(decision_tree)
-    print_tree(decision_tree, metadata)
+    # print_tree(decision_tree, metadata)
+
+    # print 'Predicted value: ' +
+    print '<Predictions for the Test Set Instances>'
+    dt_test(decision_tree, metadata)
 
 
 # Calling the main function
