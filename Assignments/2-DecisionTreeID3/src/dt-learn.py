@@ -201,12 +201,11 @@ def dt_test(decision_tree, metadata):
         total_preds += 1
     print 'Number of correctly classified: ' + str(correct_preds) + \
           ' Total number of test instances: ' + str(len(predicted_vals))
-    print 'Accuracy: ' + str(float(correct_preds) / len(predicted_vals))
+    # print 'Accuracy: ' + str(float(correct_preds) / len(predicted_vals))
 
 
 # Driver Code
 def main():
-    print 'Commandline args: ' + sys.argv[1] + ' ' + sys.argv[2] + ' ' + sys.argv[3]
     dataset, metadata = import_data(sys.argv[1])
     # features = [feature for feature in metadata.names()[:-1] if metadata[feature][0] != 'numeric']
     features = metadata.names()[:-1]
