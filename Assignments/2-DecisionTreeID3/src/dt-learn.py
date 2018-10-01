@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 import math
 from pprint import pprint
+import sys
 
 
 # Importing dataset
 def import_data(dataset_arff):
-    data, meta = arff.loadarff('../dataset/' + dataset_arff)
+    data, meta = arff.loadarff('dataset/' + dataset_arff)
     return pd.DataFrame(data), meta
 
 
@@ -187,7 +188,7 @@ def predict(learned_tree, metadata, testing_query, default=None):
 
 
 def dt_test(decision_tree, metadata):
-    training_set, metadata = import_data('heart_test.arff')
+    training_set, metadata = import_data(sys.argv[2])
 
     predicted_vals = [(predict(decision_tree, metadata, training_sample[1], 'default'), training_sample[1][-1])
                       for training_sample in training_set.iterrows()]
@@ -205,16 +206,17 @@ def dt_test(decision_tree, metadata):
 
 # Driver Code
 def main():
-    dataset, metadata = import_data('heart_train.arff')
+    print 'Commandline args: ' + sys.argv[1] + ' ' + sys.argv[2] + ' ' + sys.argv[3]
+    dataset, metadata = import_data(sys.argv[1])
     # features = [feature for feature in metadata.names()[:-1] if metadata[feature][0] != 'numeric']
     features = metadata.names()[:-1]
     target_attrib = metadata.names()[-1]
 
     # print(entropy_num(dataset, metadata, target_attrib, 'age'))
 
-    decision_tree = dt_learn_id3(dataset, 2, metadata, features, target_attrib, None)
+    decision_tree = dt_learn_id3(dataset, int(sys.argv[3]), metadata, features, target_attrib, None)
     # pprint(decision_tree)
-    # print_tree(decision_tree, metadata)
+    print_tree(decision_tree, metadata)
 
     # print 'Predicted value: ' +
     print '<Predictions for the Test Set Instances>'
