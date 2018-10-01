@@ -128,11 +128,11 @@ def dt_learn_id3(dataset, m, metadata, features, target_attribute, current_max_c
 
         sub_dataset_lte = dataset[dataset[best_feature] <= split_val]
         subtree_lte = dt_learn_id3(sub_dataset_lte, m, metadata, features, target_attribute, current_max_class)
-        tree[best_feature]['<= ' + str(split_val)] = subtree_lte
+        tree[best_feature]['<= ' + '{:.6f}'.format(split_val)] = subtree_lte
 
         sub_dataset_gt = dataset[dataset[best_feature] > split_val]
         subtree_gt = dt_learn_id3(sub_dataset_gt, m, metadata, features, target_attribute, current_max_class)
-        tree[best_feature]['> ' + str(split_val)] = subtree_gt
+        tree[best_feature]['> ' + '{:.6f}'.format(split_val)] = subtree_gt
 
     return tree
 
@@ -140,9 +140,9 @@ def dt_learn_id3(dataset, m, metadata, features, target_attribute, current_max_c
 def print_tree(root, metadata, depth=0):
     if root is None:
         return
-    for feature, value in root.items():
+    for feature, value in root.iteritems():
         if isinstance(value, dict):
-            for key, val in value.items():
+            for key, val in value.iteritems():
                 if isinstance(val, dict):
                     if metadata[feature][0] != 'numeric':
                         print ('|' + '\t') * depth + str(feature) + ' = ' + str(key)
@@ -176,15 +176,15 @@ def predict(learned_tree, metadata, testing_query, default=None):
     else:
         split_val = float(learned_tree[feature].items()[0][0].split()[-1])
         if val <= split_val:
-            if isinstance(learned_tree[feature]['<= ' + str(split_val)], dict):
-                return predict(learned_tree[feature]['<= ' + str(split_val)], metadata, testing_query, default)
+            if isinstance(learned_tree[feature]['<= ' + '{:.6f}'.format(split_val)], dict):
+                return predict(learned_tree[feature]['<= ' + '{:.6f}'.format(split_val)], metadata, testing_query, default)
             else:
-                return learned_tree[feature]['<= ' + str(split_val)]
+                return learned_tree[feature]['<= ' + '{:.6f}'.format(split_val)]
         else:
-            if isinstance(learned_tree[feature]['> ' + str(split_val)], dict):
-                return predict(learned_tree[feature]['> ' + str(split_val)], metadata, testing_query, default)
+            if isinstance(learned_tree[feature]['> ' + '{:.6f}'.format(split_val)], dict):
+                return predict(learned_tree[feature]['> ' + '{:.6f}'.format(split_val)], metadata, testing_query, default)
             else:
-                return learned_tree[feature]['> ' + str(split_val)]
+                return learned_tree[feature]['> ' + '{:.6f}'.format(split_val)]
 
 
 def dt_test(decision_tree, metadata):
