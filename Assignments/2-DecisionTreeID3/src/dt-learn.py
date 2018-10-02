@@ -74,7 +74,8 @@ def dt_learn_id3(dataset, m, metadata, features, target_attribute, current_max_c
         return dataset[target_attribute].unique()[0]
     if len(dataset) < m:
         # print 'Reached empty dataset'
-        if len(dataset) == 0:
+        # Assuming target attribute is binary
+        if len(dataset) == 0 or dataset[target_attribute].value_counts()[0] == dataset[target_attribute].value_counts()[1]:
             return current_max_class
         else:
             return dataset[target_attribute].mode()[0]
