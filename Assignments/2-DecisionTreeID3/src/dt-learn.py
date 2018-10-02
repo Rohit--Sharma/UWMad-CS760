@@ -72,9 +72,12 @@ def dt_learn_id3(dataset, m, metadata, features, target_attribute, current_max_c
     if dataset[target_attribute].nunique() == 1:
         # print dataset[target_attribute].unique()
         return dataset[target_attribute].unique()[0]
-    if len(dataset) < m or len(dataset) == 0:
+    if len(dataset) < m:
         # print 'Reached empty dataset'
-        return current_max_class
+        if len(dataset) == 0:
+            return current_max_class
+        else:
+            return dataset[target_attribute].mode()[0]
     if len(features) == 0:
         return current_max_class
 
