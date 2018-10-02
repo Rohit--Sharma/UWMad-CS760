@@ -137,25 +137,42 @@ def dt_learn_id3(dataset, m, metadata, features, target_attribute, current_max_c
     return tree
 
 
-def print_tree(root, metadata, depth=0):
+def print_tree(root, metadata, dataset, depth=0):
     if root is None:
         return
-    for feature, value in root.iteritems():
-        if isinstance(value, dict):
-            for key, val in value.iteritems():
-                if isinstance(val, dict):
-                    if metadata[feature][0] != 'numeric':
-                        print ('|' + '\t') * depth + str(feature) + ' = ' + str(key)
-                    else:
-                        print ('|' + '\t') * depth + str(feature) + ' ' + str(key)
-                    print_tree(val, metadata, depth + 1)
+    feature = root.items()[0][0]
+    if metadata[feature][0] not in ['numeric', 'real']:
+        for value in metadata[feature][1]:
+            count_str = ' [' + str(dataset[dataset[feature] == value][dataset['class'] == 'negative'].shape[0]) + ' ' + \
+                      str(dataset[dataset[feature] == value][dataset['class'] == 'positive'].shape[0]) + ']'
+            if isinstance(root[feature][value], dict):
+                print ('|' + '\t') * depth + str(feature) + ' = ' + str(value) + count_str
+                print_tree(root[feature][value], metadata, dataset[dataset[feature] == value], depth + 1)
+            else:
+                print ('|' + '\t') * depth + str(feature) + ' = ' + str(value) + count_str + \
+                      ': ' + str(root[feature][value])
+    else:
+        split_val = float(root[feature].items()[0][0].split()[-1])
+        for value in ['<= ' + '{:.6f}'.format(split_val), '> ' + '{:.6f}'.format(split_val)]:
+            count_str_lte = ' [' + str(dataset[dataset[feature] <= split_val][dataset['class'] == 'negative'].shape[0]) + ' ' + \
+                      str(dataset[dataset[feature] <= split_val][dataset['class'] == 'positive'].shape[0]) + ']'
+            count_str_gt = ' [' + str(
+                        dataset[dataset[feature] > split_val][dataset['class'] == 'negative'].shape[0]) + ' ' + \
+                          str(dataset[dataset[feature] > split_val][dataset['class'] == 'positive'].shape[0]) + ']'
+            if isinstance(root[feature][value], dict):
+                if value.split()[0] == '<=':
+                    print ('|' + '\t') * depth + str(feature) + ' ' + str(value) + count_str_lte
+                    print_tree(root[feature][value], metadata, dataset[dataset[feature] <= split_val], depth + 1)
                 else:
-                    if metadata[feature][0] != 'numeric':
-                        print ('|' + '\t') * depth + str(feature) + ' = ' + str(key) + ': ' + str(val)
-                    else:
-                        print ('|' + '\t') * depth + str(feature) + ' ' + str(key) + ': ' + str(val)
-        else:
-            print ('|' + '\t') * depth + str(feature) + ': ' + str(value)
+                    print ('|' + '\t') * depth + str(feature) + ' ' + str(value) + count_str_gt
+                    print_tree(root[feature][value], metadata, dataset[dataset[feature] > split_val], depth + 1)
+            else:
+                if value.split()[0] == '<=':
+                    print ('|' + '\t') * depth + str(feature) + ' ' + str(value) + count_str_lte + \
+                          ': ' + str(root[feature][value])
+                else:
+                    print ('|' + '\t') * depth + str(feature) + ' ' + str(value) + count_str_gt + \
+                          ': ' + str(root[feature][value])
 
 
 def predict(learned_tree, metadata, testing_query, default=None):
@@ -215,7 +232,7 @@ def main():
 
     decision_tree = dt_learn_id3(dataset, int(sys.argv[3]), metadata, features, target_attrib, None)
     # pprint(decision_tree)
-    print_tree(decision_tree, metadata)
+    print_tree(decision_tree, metadata, dataset)
 
     # print 'Predicted value: ' +
     print '<Predictions for the Test Set Instances>'
