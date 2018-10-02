@@ -7,8 +7,8 @@ import sys
 
 
 # Importing dataset
-def import_data(dataset_arff):
-    data, meta = arff.loadarff('dataset/' + dataset_arff)
+def import_data(dataset_arff_path):
+    data, meta = arff.loadarff(dataset_arff_path)
     return pd.DataFrame(data), meta
 
 
@@ -235,8 +235,8 @@ def predict(learned_tree, metadata, testing_query, default=None):
                 return learned_tree[feature]['> ' + '{:.6f}'.format(split_val)]
 
 
-def dt_test(decision_tree, metadata):
-    training_set, metadata = import_data(sys.argv[2])
+def dt_test(decision_tree, test_set_path, metadata):
+    training_set, metadata = import_data(test_set_path)
 
     predicted_vals = [(predict(decision_tree, metadata, training_sample[1], 'default'), training_sample[1][-1])
                       for training_sample in training_set.iterrows()]
@@ -254,20 +254,24 @@ def dt_test(decision_tree, metadata):
 
 # Driver Code
 def main():
-    dataset, metadata = import_data(sys.argv[1])
+    training_data_file_path = 'dataset/' + sys.argv[1]
+    testing_data_file_path = 'dataset/' + sys.argv[2]
+    m = int(sys.argv[3])
+
+    dataset, metadata = import_data(training_data_file_path)
     # features = [feature for feature in metadata.names()[:-1] if metadata[feature][0] != 'numeric']
     features = metadata.names()[:-1]
     target_attrib = metadata.names()[-1]
 
     # print(entropy_num(dataset, metadata, target_attrib, 'age'))
 
-    decision_tree = dt_learn_id3(dataset, int(sys.argv[3]), metadata, features, target_attrib, None)
+    decision_tree = dt_learn_id3(dataset, m, metadata, features, target_attrib, None)
     # pprint(decision_tree)
     print_tree(decision_tree, metadata, dataset)
 
     # print 'Predicted value: ' +
     print '<Predictions for the Test Set Instances>'
-    dt_test(decision_tree, metadata)
+    dt_test(decision_tree, testing_data_file_path, metadata)
 
 
 # Calling the main function
