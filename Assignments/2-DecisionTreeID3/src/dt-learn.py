@@ -170,32 +170,29 @@ def print_tree(root, metadata, dataset, depth=0):
     feature = root.items()[0][0]
     if metadata[feature][0] not in ['numeric', 'real']:
         for value in metadata[feature][1]:
-            dataset = dataset[dataset[feature] == value]
-            count_str = ' [' + str(dataset[dataset['class'] == 'negative'].shape[0]) + ' ' + \
-                      str(dataset[dataset['class'] == 'positive'].shape[0]) + ']'
+            count_str = ' [' + str(dataset[dataset[feature] == value][dataset['class'] == 'negative'].shape[0]) + ' ' + \
+                      str(dataset[dataset[feature] == value][dataset['class'] == 'positive'].shape[0]) + ']'
             if isinstance(root[feature][value], dict):
                 print ('|' + '\t') * depth + str(feature) + ' = ' + str(value) + count_str
-                print_tree(root[feature][value], metadata, dataset, depth + 1)
+                print_tree(root[feature][value], metadata, dataset[dataset[feature] == value], depth + 1)
             else:
                 print ('|' + '\t') * depth + str(feature) + ' = ' + str(value) + count_str + \
                       ': ' + str(root[feature][value])
     else:
         split_val = float(root[feature].items()[0][0].split()[-1])
-        dataset_lte = dataset[dataset[feature] <= split_val]
-        dataset_gt = dataset[dataset[feature] > split_val]
         for value in ['<= ' + '{:.6f}'.format(split_val), '> ' + '{:.6f}'.format(split_val)]:
-            count_str_lte = ' [' + str(dataset_lte[dataset['class'] == 'negative'].shape[0]) + ' ' + \
-                      str(dataset_lte[dataset_lte['class'] == 'positive'].shape[0]) + ']'
+            count_str_lte = ' [' + str(dataset[dataset[feature] <= split_val][dataset['class'] == 'negative'].shape[0]) + ' ' + \
+                      str(dataset[dataset[feature] <= split_val][dataset['class'] == 'positive'].shape[0]) + ']'
             count_str_gt = ' [' + str(
-                dataset_gt[dataset['class'] == 'negative'].shape[0]) + ' ' + \
-                          str(dataset_gt[dataset_gt['class'] == 'positive'].shape[0]) + ']'
+                        dataset[dataset[feature] > split_val][dataset['class'] == 'negative'].shape[0]) + ' ' + \
+                          str(dataset[dataset[feature] > split_val][dataset['class'] == 'positive'].shape[0]) + ']'
             if isinstance(root[feature][value], dict):
                 if value.split()[0] == '<=':
                     print ('|' + '\t') * depth + str(feature) + ' ' + str(value) + count_str_lte
-                    print_tree(root[feature][value], metadata, dataset_lte, depth + 1)
+                    print_tree(root[feature][value], metadata, dataset[dataset[feature] <= split_val], depth + 1)
                 else:
                     print ('|' + '\t') * depth + str(feature) + ' ' + str(value) + count_str_gt
-                    print_tree(root[feature][value], metadata, dataset_gt, depth + 1)
+                    print_tree(root[feature][value], metadata, dataset[dataset[feature] > split_val], depth + 1)
             else:
                 if value.split()[0] == '<=':
                     print ('|' + '\t') * depth + str(feature) + ' ' + str(value) + count_str_lte + \
