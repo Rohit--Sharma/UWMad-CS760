@@ -94,20 +94,47 @@ def dt_learn_id3(dataset, m, metadata, features, target_attribute, current_max_c
                          for feature in numeric_features]
     # print info_gain_numeric
 
-    if info_gain_values is not None and len(info_gain_values) > 0:
-        best_feature = nominal_features[np.argmax(info_gain_values)]
-    if info_gain_numeric is not None and len(info_gain_numeric) > 0:
-        best_feature_numeric = numeric_features[np.argmax([info_gain[0] for info_gain in info_gain_numeric])]
+    # if info_gain_values is not None and len(info_gain_values) > 0:
+    #     best_feature = nominal_features[np.argmax(info_gain_values)]
+    info_gain_max = -1
+    index = 0
+    for info_gain_val in info_gain_values:
+        if info_gain_val > info_gain_max:
+            info_gain_max = info_gain_val
+            best_feature = nominal_features[index]
+        index += 1
+
+    # if info_gain_numeric is not None and len(info_gain_numeric) > 0:
+    #     best_feature_numeric = numeric_features[np.argmax([info_gain[0] for info_gain in info_gain_numeric])]
+    info_gain_numeric_max = -1
+    index = 0
+    info_gain_split_val = 0
+    for info_gain_val in info_gain_numeric:
+        if info_gain_val[0] > info_gain_numeric_max:
+            info_gain_numeric_max = info_gain_val[0]
+            info_gain_split_val = info_gain_val[1]
+            best_feature_numeric = numeric_features[index]
+        index += 1
     # print best_feature_numeric, info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])]
     # print best_feature, info_gain_values[np.argmax(info_gain_values)]
 
     if info_gain_values is not None and len(info_gain_values) > 0 and \
             info_gain_numeric is not None and len(info_gain_numeric) > 0:
+        if info_gain_max == info_gain_numeric_max:
+            if metadata.names().index(best_feature) > metadata.names().index(best_feature_numeric):
+                best_feature = best_feature_numeric
+                info_gain_max = info_gain_numeric_max
+        elif info_gain_numeric_max > info_gain_max:
+            best_feature = best_feature_numeric
+            info_gain_max = info_gain_numeric_max
+        '''
         best_feature = best_feature if info_gain_values[np.argmax(info_gain_values)] >= \
                                        info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][
                                            0] else best_feature_numeric
+        '''
     elif info_gain_values is None or not len(info_gain_values):
         best_feature = best_feature_numeric
+        info_gain_max = info_gain_numeric_max
 
     # print best_feature_overall, metadata[best_feature_overall][0]
     # print best_feature_numeric, info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][1]
@@ -124,7 +151,7 @@ def dt_learn_id3(dataset, m, metadata, features, target_attribute, current_max_c
             subtree = dt_learn_id3(sub_dataset, m, metadata, features, target_attribute, current_max_class)
             tree[best_feature][value] = subtree
     elif metadata[best_feature][0] in ['numeric', 'real']:
-        split_val = info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][1]
+        split_val = info_gain_split_val  # info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][1]
 
         sub_dataset_lte = dataset[dataset[best_feature] <= split_val]
         subtree_lte = dt_learn_id3(sub_dataset_lte, m, metadata, features, target_attribute, current_max_class)
