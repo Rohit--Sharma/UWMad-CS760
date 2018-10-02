@@ -1,2 +1,1 @@
-python src/dt-learn.py $1 $2 $3
-
+python -W ignore src/dt-learn.py $1 $2 $3
