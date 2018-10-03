@@ -140,6 +140,9 @@ def dt_learn_id3(dataset, m, metadata, features, target_attribute, current_max_c
         best_feature = best_feature_numeric
         info_gain_max = info_gain_numeric_max
 
+    if info_gain_max == 0:
+        return current_max_class
+
     # print best_feature_overall, metadata[best_feature_overall][0]
     # print best_feature_numeric, info_gain_numeric[np.argmax([info_gain[0] for info_gain in info_gain_numeric])][1]
 
@@ -235,7 +238,7 @@ def predict(learned_tree, metadata, testing_query, default=None):
                 return learned_tree[feature]['> ' + '{:.6f}'.format(split_val)]
 
 
-def dt_test(decision_tree, test_set_path, metadata):
+def dt_test(decision_tree, test_set_path, print_res=True):
     training_set, metadata = import_data(test_set_path)
 
     predicted_vals = [(predict(decision_tree, metadata, training_sample[1], 'default'), training_sample[1][-1])
@@ -243,17 +246,24 @@ def dt_test(decision_tree, test_set_path, metadata):
     correct_preds = 0
     total_preds = 1
     for prediction in predicted_vals:
-        print str(total_preds) + ': Actual: ' + prediction[1] + ' Predicted: ' + prediction[0]
+        if print_res:
+            print str(total_preds) + ': Actual: ' + prediction[1] + ' Predicted: ' + prediction[0]
         if prediction[0] == prediction[1]:
             correct_preds += 1
         total_preds += 1
-    print 'Number of correctly classified: ' + str(correct_preds) + \
-          ' Total number of test instances: ' + str(len(predicted_vals))
+    if print_res:
+        print 'Number of correctly classified: ' + str(correct_preds) + \
+              ' Total number of test instances: ' + str(len(predicted_vals))
     # print 'Accuracy: ' + str(float(correct_preds) / len(predicted_vals))
+    return float(correct_preds) / len(predicted_vals)   # accuracy
 
 
 # Driver Code
 def main():
+    if len(sys.argv) != 4:
+        print 'Usage: dt-learn <dataset> <trainset> m'
+        sys.exit(1)
+
     training_data_file_path = 'dataset/' + sys.argv[1]
     testing_data_file_path = 'dataset/' + sys.argv[2]
     m = int(sys.argv[3])
@@ -271,7 +281,7 @@ def main():
 
     # print 'Predicted value: ' +
     print '<Predictions for the Test Set Instances>'
-    dt_test(decision_tree, testing_data_file_path, metadata)
+    dt_test(decision_tree, testing_data_file_path)
 
 
 # Calling the main function
