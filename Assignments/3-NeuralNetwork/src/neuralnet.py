@@ -80,9 +80,13 @@ if __name__ == '__main__':
 
     correct_pred = 0
     for i in range(len(data)):
-        actual_label = 0 if data[i, -1] == 'Rock' else 1
-        predicted_label = 0 if neural_net.forward_propagate(data[i, :-1].astype(float))[0][0] < 0.5 else 1
-        print 'Actual:', actual_label, 'Predicted:', predicted_label
+        # actual_label = 0 if data[i, -1] == 'Rock' else 1
+        # predicted_label = 0 if neural_net.forward_propagate(data[i, :-1].astype(float))[0][0] < 0.5 else 1
+        # print 'Actual:', actual_label, 'Predicted:', predicted_label
+        actual_label = data[i, -1]
+        confidence_of_pred = neural_net.forward_propagate(data[i, :-1].astype(float))[0][0]
+        predicted_label = meta[meta.names()[-1]][1][0] if confidence_of_pred < 0.5 else meta[meta.names()[-1]][1][1]
+        print i, predicted_label, actual_label, confidence_of_pred
         if actual_label == predicted_label:
             correct_pred += 1
 
