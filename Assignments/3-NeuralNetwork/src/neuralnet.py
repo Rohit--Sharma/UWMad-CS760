@@ -53,6 +53,22 @@ class NeuralNetwork:
 
         return output_vector
 
+    @staticmethod
+    def test_neural_net(test_set):
+        correct_pred = 0
+        for i in range(len(test_set)):
+            # actual_label = 0 if data[i, -1] == 'Rock' else 1
+            # predicted_label = 0 if neural_net.forward_propagate(data[i, :-1].astype(float))[0][0] < 0.5 else 1
+            # print 'Actual:', actual_label, 'Predicted:', predicted_label
+            actual_label = test_set[i, -1]
+            confidence_of_pred = neural_net.forward_propagate(test_set[i, :-1].astype(float))[0][0]
+            predicted_label = meta[meta.names()[-1]][1][0] if confidence_of_pred < 0.5 else meta[meta.names()[-1]][1][1]
+            print i, predicted_label, actual_label, confidence_of_pred
+            if actual_label == predicted_label:
+                correct_pred += 1
+
+        return correct_pred * 1.0 / len(test_set)
+
 
 if __name__ == '__main__':
     """
@@ -69,25 +85,20 @@ if __name__ == '__main__':
     learning_rate = float(sys.argv[3])
     num_epochs = int(sys.argv[4])
 
+    np.random.seed(0)
     data, meta = arff.loadarff(training_data_file_path)
     data = np.asarray(data.tolist())
     np.random.shuffle(data)
+    train_data_size = int(len(data) * 0.9)
+    train_data = data[:train_data_size]
+    test_data = data[train_data_size:]
 
     neural_net = NeuralNetwork(len(meta.names()) - 1, len(meta.names()) - 1, 1, learning_rate, num_epochs)
     for _ in range(neural_net.epoch):
-        for i in range(len(data)):
-            neural_net.train(data[i, :-1].astype(float), [0.0] if data[i, -1] == 'Rock' else [1.0])
+        for i in range(len(train_data)):
+            neural_net.train(train_data[i, :-1].astype(float), [0.0] if train_data[i, -1] == 'Rock' else [1.0])
 
-    correct_pred = 0
-    for i in range(len(data)):
-        # actual_label = 0 if data[i, -1] == 'Rock' else 1
-        # predicted_label = 0 if neural_net.forward_propagate(data[i, :-1].astype(float))[0][0] < 0.5 else 1
-        # print 'Actual:', actual_label, 'Predicted:', predicted_label
-        actual_label = data[i, -1]
-        confidence_of_pred = neural_net.forward_propagate(data[i, :-1].astype(float))[0][0]
-        predicted_label = meta[meta.names()[-1]][1][0] if confidence_of_pred < 0.5 else meta[meta.names()[-1]][1][1]
-        print i, predicted_label, actual_label, confidence_of_pred
-        if actual_label == predicted_label:
-            correct_pred += 1
-
-    print 'Accuracy:', correct_pred * 1.0 / len(data)
+    train_accuracy = neural_net.test_neural_net(train_data)
+    test_accuracy = neural_net.test_neural_net(test_data)
+    print 'Train accuracy:', train_accuracy
+    print 'Test accuracy:', test_accuracy
