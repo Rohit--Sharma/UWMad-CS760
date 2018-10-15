@@ -1,43 +1,60 @@
-from scipy.io import arff
-import numpy as np
-import pandas as pd
 import sys
-import math
+import numpy as np
+from scipy.io import arff
+from scipy.special import expit as sigmoid
 
 
-def import_data(dataset_arff_path):
-    """
-    Importing the arff file
-    :param dataset_arff_path: String, the path of the arff file to be imported
-    :return: DataFrame and Metadata for the file content
-    """
-    data, meta = arff.loadarff(dataset_arff_path)
-    return pd.DataFrame(data), meta
+class NeuralNetwork:
+    def __init__(self, in_nodes, hidden_nodes, out_nodes, learn_rate, epoch):
+        self.num_input_nodes = in_nodes
+        self.num_hidden_nodes = hidden_nodes
+        self.num_output_nodes = out_nodes
+        self.learning_rate = learn_rate
+        self.epoch = epoch
+
+        self.weights_input_hidden = np.random.uniform(-1.0, 1.0, (hidden_nodes, in_nodes + 1))  # add 1 for bias
+        self.weights_hidden_output = np.random.uniform(-1.0, 1.0, (out_nodes, hidden_nodes + 1))  # add 1 for bias
+
+    def train(self, input_vec, target_vec):
+        # input_vec and target_vec can be tuple, list or ndarray
+        input_vec = np.array(input_vec, ndmin=2).T
+        input_vec = np.concatenate((input_vec, [[1]]))      # Concatenate a row of 1 for bias
+        target_vec = np.array(target_vec, ndmin=2).T
+
+        output_vector1 = np.dot(self.weights_input_hidden, input_vec)
+        output_vector_hidden = sigmoid(output_vector1)
+        output_vector_hidden = np.concatenate((output_vector_hidden, [[1]]))      # Concatenate a row of 1 for bias
+
+        output_vector2 = np.dot(self.weights_hidden_output, output_vector_hidden)
+        output_vector_network = sigmoid(output_vector2)
+
+        output_errors = target_vec - output_vector_network
+        # update the weights:
+        tmp = output_errors * output_vector_network * (1.0 - output_vector_network)
+        tmp = self.learning_rate * np.dot(tmp, output_vector_hidden.T)
+        self.weights_hidden_output += tmp
+        # calculate hidden errors:
+        hidden_errors = np.dot(self.weights_hidden_output.T, output_errors)
+        # update the weights:
+        tmp = hidden_errors * output_vector_hidden * (1.0 - output_vector_hidden)
+        self.weights_input_hidden += self.learning_rate * np.dot(tmp, input_vec.T)[:-1, :]  # ???? last element cut off, ???
+
+    def forward_propagate(self, input_vec):
+        # input_vector can be tuple, list or ndarray
+
+        input_vec = np.array(input_vec, ndmin=2).T
+        input_vec = np.concatenate((input_vec, [[1]]))  # Concatenate a row of 1 for bias
+        output_vector = np.dot(self.weights_input_hidden, input_vec)
+        output_vector = sigmoid(output_vector)
+        output_vector = np.concatenate((output_vector, [[1]]))
+
+        output_vector = np.dot(self.weights_hidden_output, output_vector)
+        output_vector = sigmoid(output_vector)
+
+        return output_vector
 
 
-def sigmoid(input):
-    return 1.0 / (1.0 + math.exp(-input))
-
-
-def neuralnet_learn(dataset, input_layer_dim, hidden_layer_dim, output_layer_dim, num_folds, learning_rate, num_epochs):
-    # np.random.seed(100)
-    num_instances = dataset.shape[0]
-
-    weights_layer_1 = np.random.uniform(-1.0, 1.0, (input_layer_dim, hidden_layer_dim))
-    bias_layer_1 = np.random.uniform(-1.0, 1.0, (num_instances, hidden_layer_dim))
-    weights_layer_2 = np.random.uniform(-1.0, 1.0, (hidden_layer_dim, output_layer_dim))
-    bias_layer_2 = np.random.uniform(-1.0, 1.0, (num_instances, output_layer_dim))
-
-    z_layer_1 = dataset.iloc[:, :-1].dot(weights_layer_1) + bias_layer_1
-    activate_layer_1 = z_layer_1.applymap(lambda val: sigmoid(val))
-
-    z_layer_2 = activate_layer_1.dot(weights_layer_2) + bias_layer_2
-    activate_layer_2 = z_layer_2.applymap(lambda val: sigmoid(val))
-
-    print activate_layer_2
-
-
-def main():
+if __name__ == '__main__':
     """
     The driver method which takes in command line arguments, trains the neural network using backpropagation
     algorithm, and predicts the output for each instance with some confidence
@@ -52,15 +69,21 @@ def main():
     learning_rate = float(sys.argv[3])
     num_epochs = int(sys.argv[4])
 
-    dataset, metadata = import_data(training_data_file_path)
+    data, meta = arff.loadarff(training_data_file_path)
+    data = np.asarray(data.tolist())
+    np.random.shuffle(data)
 
-    input_layer_dim = dataset.shape[1] - 1      # Excluded 1 for class attribute
-    hidden_layer_dim = input_layer_dim
-    output_layer_dim = 1
+    neural_net = NeuralNetwork(len(meta.names()) - 1, len(meta.names()) - 1, 1, learning_rate, num_epochs)
+    for _ in range(neural_net.epoch):
+        for i in range(len(data)):
+            neural_net.train(data[i, :-1].astype(float), [0.0] if data[i, -1] == 'Rock' else [1.0])
 
-    neuralnet_learn(dataset, input_layer_dim, hidden_layer_dim, output_layer_dim, num_folds, learning_rate, num_epochs)
+    correct_pred = 0
+    for i in range(len(data)):
+        actual_label = 0 if data[i, -1] == 'Rock' else 1
+        predicted_label = 0 if neural_net.forward_propagate(data[i, :-1].astype(float))[0][0] < 0.5 else 1
+        print 'Actual:', actual_label, 'Predicted:', predicted_label
+        if actual_label == predicted_label:
+            correct_pred += 1
 
-
-# Calling the main function
-if __name__ == '__main__':
-    main()
+    print 'Accuracy:', correct_pred * 1.0 / len(data)
