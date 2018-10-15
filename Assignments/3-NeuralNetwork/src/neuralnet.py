@@ -56,20 +56,17 @@ class NeuralNetwork:
 
     @staticmethod
     def test_neural_net(test_set, indices, predictions):
-        correct_pred = 0
-        for i in range(len(test_set)):
-            # actual_label = 0 if data[i, -1] == 'Rock' else 1
-            # predicted_label = 0 if neural_net.forward_propagate(data[i, :-1].astype(float))[0][0] < 0.5 else 1
-            # print 'Actual:', actual_label, 'Predicted:', predicted_label
-            actual_label = test_set[i, -1]
-            confidence_of_pred = neural_net.forward_propagate(test_set[i, :-1].astype(float))[0][0]
-            predicted_label = meta[meta.names()[-1]][1][0] if confidence_of_pred < 0.5 else meta[meta.names()[-1]][1][1]
+        # correct_pred = 0
+        for i in range(len(indices)):
+            # actual_label = test_set[indices[i], -1]
+            confidence_of_pred = neural_net.forward_propagate(test_set[indices[i], :-1].astype(float))[0][0]
+            # predicted_label = meta[meta.names()[-1]][1][0] if confidence_of_pred < 0.5 else meta[meta.names()[-1]][1][1]
             # print i, predicted_label, actual_label, confidence_of_pred
+            predictions[indices[i]] = confidence_of_pred
+            # if actual_label == predicted_label:
+            #    correct_pred += 1
 
-            if actual_label == predicted_label:
-                correct_pred += 1
-
-        return correct_pred * 1.0 / len(test_set)
+        # return correct_pred * 1.0 / len(indices)
 
 
 if __name__ == '__main__':
@@ -91,30 +88,25 @@ if __name__ == '__main__':
     data, meta = arff.loadarff(training_data_file_path)
     data = np.asarray(data.tolist())
     skf = StratifiedKFold(n_splits=num_folds, shuffle=True, random_state=37)
-    # np.random.shuffle(data)
-    # train_data_size = int(len(data) * 0.9)
-    # train_data = data[:train_data_size]
-    # test_data = data[train_data_size:]
-
-    # neural_net = NeuralNetwork(len(meta.names()) - 1, len(meta.names()) - 1, 1, learning_rate, num_epochs)
-    # for _ in range(neural_net.epoch):
-    # for i in range(len(train_data)):
-    #     neural_net.train(train_data[i, :-1].astype(float), [0.0] if train_data[i, -1] == 'Rock' else [1.0])
 
     predicted_confidences = np.zeros(len(data))
+    fold_numbers = np.zeros(len(data), dtype=int)
+    curr_fold_num = 0
     for train_indexes, test_indexes in skf.split(data[:, :-1].astype(float), data[:, -1]):
+        fold_numbers[test_indexes] = curr_fold_num
+        curr_fold_num += 1
+
         X_train, X_test = data[train_indexes, :-1].astype(float), data[test_indexes, :-1].astype(float)
         y_train, y_test = data[train_indexes, -1], data[test_indexes, -1]
         neural_net = NeuralNetwork(len(meta.names()) - 1, len(meta.names()) - 1, 1, learning_rate, num_epochs)
         for _ in range(neural_net.epoch):
             for i in range(len(X_train)):
                 neural_net.train(X_train[i], [0.0] if y_train[i] == 'Rock' else [1.0])
-        fold_accuracy = neural_net.test_neural_net(data[test_indexes], test_indexes, predicted_confidences)
-        print 'Fold accuracy:', fold_accuracy
+        # fold_accuracy = neural_net.test_neural_net(data, test_indexes, predicted_confidences)
+        neural_net.test_neural_net(data, test_indexes, predicted_confidences)
+        # print 'Fold accuracy:', fold_accuracy
 
-    """
-    train_accuracy = neural_net.test_neural_net(train_data)
-    test_accuracy = neural_net.test_neural_net(test_data)
-    print 'Train accuracy:', train_accuracy
-    print 'Test accuracy:', test_accuracy
-    """
+    for i in range(len(data)):
+        predicted_label = meta[meta.names()[-1]][1][0] if predicted_confidences[i] < 0.5 else meta[meta.names()[-1]][1][1]
+        actual_label = data[i, -1]
+        print fold_numbers[i], predicted_label, actual_label, predicted_confidences[i]
