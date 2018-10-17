@@ -54,12 +54,11 @@ class NeuralNetwork:
 
         return output_vector
 
-    @staticmethod
-    def test_neural_net(test_set, indices, predictions):
+    def test_neural_net(self, test_set, indices, predictions):
         # correct_pred = 0
         for i in range(len(indices)):
             # actual_label = test_set[indices[i], -1]
-            confidence_of_pred = neural_net.forward_propagate(test_set[indices[i], :-1].astype(float))[0][0]
+            confidence_of_pred = self.forward_propagate(test_set[indices[i], :-1].astype(float))[0][0]
             # predicted_label = meta[meta.names()[-1]][1][0] if confidence_of_pred < 0.5 else meta[meta.names()[-1]][1][1]
             # print i, predicted_label, actual_label, confidence_of_pred
             predictions[indices[i]] = confidence_of_pred
