@@ -39,9 +39,12 @@ def main():
             X_train, X_test = data[train_indexes, :-1].astype(float), data[test_indexes, :-1].astype(float)
             y_train, y_test = data[train_indexes, -1], data[test_indexes, -1]
             neural_net = neuralnet.NeuralNetwork(len(meta.names()) - 1, len(meta.names()) - 1, 1, 0.1, epoch)
+            y_train = np.array(y_train, ndmin=2).T
             for _ in range(neural_net.epoch):
-                for i in range(len(X_train)):
-                    neural_net.train(X_train[i], [0.0] if y_train[i] == 'Rock' else [1.0])
+                train_data = np.concatenate((X_train, y_train), axis=1)
+                np.random.shuffle(train_data)
+                for i in range(len(train_data)):
+                    neural_net.train(train_data[i, :-1].astype(float), [0.0] if train_data[i, -1] == 'Rock' else [1.0])
             # fold_accuracy = neural_net.test_neural_net(data, test_indexes, predicted_confidences)
             neural_net.test_neural_net(data, test_indexes, predicted_confidences)
             # print 'Fold accuracy:', fold_accuracy
@@ -73,9 +76,12 @@ def main():
             X_train, X_test = data[train_indexes, :-1].astype(float), data[test_indexes, :-1].astype(float)
             y_train, y_test = data[train_indexes, -1], data[test_indexes, -1]
             neural_net = neuralnet.NeuralNetwork(len(meta.names()) - 1, len(meta.names()) - 1, 1, 0.1, 50)
+            y_train = np.array(y_train, ndmin=2).T
             for _ in range(neural_net.epoch):
-                for i in range(len(X_train)):
-                    neural_net.train(X_train[i], [0.0] if y_train[i] == 'Rock' else [1.0])
+                train_data = np.concatenate((X_train, y_train), axis=1)
+                np.random.shuffle(train_data)
+                for i in range(len(train_data)):
+                    neural_net.train(train_data[i, :-1].astype(float), [0.0] if train_data[i, -1] == 'Rock' else [1.0])
             # fold_accuracy = neural_net.test_neural_net(data, test_indexes, predicted_confidences)
             neural_net.test_neural_net(data, test_indexes, predicted_confidences)
             # print 'Fold accuracy:', fold_accuracy
@@ -107,9 +113,12 @@ def main():
         X_train, X_test = data[train_indexes, :-1].astype(float), data[test_indexes, :-1].astype(float)
         y_train, y_test = data[train_indexes, -1], data[test_indexes, -1]
         neural_net = neuralnet.NeuralNetwork(len(meta.names()) - 1, len(meta.names()) - 1, 1, 0.1, 50)
+        y_train = np.array(y_train, ndmin=2).T
         for _ in range(neural_net.epoch):
-            for i in range(len(X_train)):
-                neural_net.train(X_train[i], [0.0] if y_train[i] == 'Rock' else [1.0])
+            train_data = np.concatenate((X_train, y_train), axis=1)
+            np.random.shuffle(train_data)
+            for i in range(len(train_data)):
+                neural_net.train(train_data[i, :-1].astype(float), [0.0] if train_data[i, -1] == 'Rock' else [1.0])
         # fold_accuracy = neural_net.test_neural_net(data, test_indexes, predicted_confidences)
         neural_net.test_neural_net(data, test_indexes, predicted_confidences)
         # print 'Fold accuracy:', fold_accuracy
@@ -123,26 +132,26 @@ def main():
         roc_input.append((predicted_confidences[i], actual_label))
 
     # Sort in decreasing order of positive confidence
-    x_fpr_vals = y_trp_vals = []
+    x_fpr_vals = []
+    y_tpr_vals = []
     roc_input.sort(reverse=True)
     num_neg = len([val for val in roc_input if val[1] == 'Rock'])
     num_pos = len([val for val in roc_input if val[1] == 'Mine'])
     tp = fp = last_tp = 0
     for i in range(len(roc_input)):
         if i > 0 and roc_input[i][0] != roc_input[i - 1][0] and roc_input[i][1] == 'Rock' and tp > last_tp:
-            # print '(', fp * 1.0 / num_neg, ',', tp * 1.0 / num_pos, ')'
-            x_fpr_vals.append(fp * 1.0 / num_neg)
-            y_trp_vals.append(tp * 1.0 / num_pos)
+            x_fpr_vals.append(float(fp) / num_neg)
+            y_tpr_vals.append(float(tp) / num_pos)
             last_tp = tp
         if roc_input[i][1] == 'Mine':
             tp += 1
-        else:
+        elif roc_input[i][1] == 'Rock':
             fp += 1
     # print '(', fp * 1.0 / num_neg, ',', tp * 1.0 / num_pos, ')'
-    x_fpr_vals.append(fp * 1.0 / num_neg)
-    y_trp_vals.append(tp * 1.0 / num_pos)
+    x_fpr_vals.append(float(fp) / num_neg)
+    y_tpr_vals.append(float(tp) / num_pos)
 
-    plot_curve(x_fpr_vals, y_trp_vals, 'False Positive Rate', 'True Positive Rate', 'ROC Curve')
+    plot_curve(x_fpr_vals, y_tpr_vals, 'False Positive Rate', 'True Positive Rate', 'ROC Curve')
 
 
 if __name__ == '__main__':

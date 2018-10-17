@@ -5,6 +5,14 @@ from scipy.special import expit as sigmoid
 from sklearn.model_selection import StratifiedKFold
 
 
+def cross_entropy_loss(predicted_val, actual_val):
+    return -actual_val * np.log(predicted_val) - (1 - actual_val) * np.log(1 - predicted_val)
+
+
+def l2_norm_loss(predicted_val, actual_val):
+    return 0.5 * np.square(predicted_val - actual_val)
+
+
 class NeuralNetwork:
     def __init__(self, in_nodes, hidden_nodes, out_nodes, learn_rate, epoch):
         self.num_input_nodes = in_nodes
@@ -29,16 +37,22 @@ class NeuralNetwork:
         output_vector2 = np.dot(self.weights_hidden_output, output_vector_hidden)
         output_vector_network = sigmoid(output_vector2)
 
+        # print 'Cross Entropy Loss:', cross_entropy_loss(output_vector_network, target_vec)
+        # print 'L2 Norm Loss:', l2_norm_loss(output_vector_network, target_vec)
+
         output_errors = target_vec - output_vector_network
         # update the weights:
-        tmp = output_errors * output_vector_network * (1.0 - output_vector_network)
-        tmp = self.learning_rate * np.dot(tmp, output_vector_hidden.T)
-        self.weights_hidden_output += tmp
+        # tmp = output_errors * output_vector_network * (1.0 - output_vector_network)
+        # tmp = self.learning_rate * np.dot(tmp, output_vector_hidden.T)
+        # self.weights_hidden_output += tmp   # l2 norm loss
         # calculate hidden errors:
         hidden_errors = np.dot(self.weights_hidden_output.T, output_errors)
         # update the weights:
         tmp = hidden_errors * output_vector_hidden * (1.0 - output_vector_hidden)
-        self.weights_input_hidden += self.learning_rate * np.dot(tmp, input_vec.T)[:-1, :]  # ???? last element cut off, ???
+        # self.weights_hidden_output += self.learning_rate * output_errors * output_vector_network    # cross entropy cost
+        self.weights_hidden_output += self.learning_rate * np.dot(output_errors, output_vector_hidden.T)    # cross entropy cost
+        self.weights_input_hidden += self.learning_rate * np.dot(tmp, input_vec.T)[:-1]    # discard the last row as there is no error for bias
+        # print 'Loss before:', cross_entropy_loss(output_vector_network, target_vec)
 
     def forward_propagate(self, input_vec):
         # input_vector can be tuple, list or ndarray
@@ -62,9 +76,9 @@ class NeuralNetwork:
             # predicted_label = meta[meta.names()[-1]][1][0] if confidence_of_pred < 0.5 else meta[meta.names()[-1]][1][1]
             # print i, predicted_label, actual_label, confidence_of_pred
             predictions[indices[i]] = confidence_of_pred
-            # if actual_label == predicted_label:
-            #    correct_pred += 1
-
+        #     if actual_label == predicted_label:
+        #         correct_pred += 1
+        #
         # return correct_pred * 1.0 / len(indices)
 
 
@@ -86,7 +100,7 @@ if __name__ == '__main__':
     np.random.seed(0)
     data, meta = arff.loadarff(training_data_file_path)
     data = np.asarray(data.tolist())
-    skf = StratifiedKFold(n_splits=num_folds, shuffle=True, random_state=37)
+    skf = StratifiedKFold(n_splits=num_folds, shuffle=True, random_state=7)
 
     predicted_confidences = np.zeros(len(data))
     fold_numbers = np.zeros(len(data), dtype=int)
@@ -98,11 +112,19 @@ if __name__ == '__main__':
         X_train, X_test = data[train_indexes, :-1].astype(float), data[test_indexes, :-1].astype(float)
         y_train, y_test = data[train_indexes, -1], data[test_indexes, -1]
         neural_net = NeuralNetwork(len(meta.names()) - 1, len(meta.names()) - 1, 1, learning_rate, num_epochs)
+        # print neural_net.weights_input_hidden
+        # print neural_net.weights_hidden_output
+        y_train = np.array(y_train, ndmin=2).T
         for _ in range(neural_net.epoch):
-            for i in range(len(X_train)):
-                neural_net.train(X_train[i], [0.0] if y_train[i] == 'Rock' else [1.0])
-        # fold_accuracy = neural_net.test_neural_net(data, test_indexes, predicted_confidences)
-        neural_net.test_neural_net(data, test_indexes, predicted_confidences)
+            train_data = np.concatenate((X_train, y_train), axis=1)
+            np.random.shuffle(train_data)
+            for i in range(len(train_data)):
+                neural_net.train(train_data[i, :-1].astype(float), [0.0] if train_data[i, -1] == meta[meta.names()[-1]][1][0] else [1.0])
+        # print
+        # print neural_net.weights_input_hidden
+        # print neural_net.weights_hidden_output
+        fold_accuracy = neural_net.test_neural_net(data, test_indexes, predicted_confidences)
+        # neural_net.test_neural_net(data, test_indexes, predicted_confidences)
         # print 'Fold accuracy:', fold_accuracy
 
     for i in range(len(data)):
