@@ -1,4 +1,5 @@
 import sys
+import math
 import numpy as np
 from scipy.io import arff
 from scipy.special import expit as sigmoid
@@ -89,6 +90,39 @@ class NeuralNetwork:
             predictions[indices[_i]] = confidence_of_pred
 
 
+def stratified_splits(target_vec, n_splits):
+    """
+    Returns the stratified split indexes
+    :param target_vec: list, the list of target values in the dataset
+    :param n_splits: int, the number of stratified splits required
+    :return: list, list of train and test indexes for each fold
+    """
+    class_1 = [i for i in range(len(target_vec)) if target_vec[i] == meta[meta.names()[-1]][1][0]]
+    class_2 = [i for i in range(len(target_vec)) if target_vec[i] == meta[meta.names()[-1]][1][1]]
+
+    np.random.shuffle(class_1)
+    np.random.shuffle(class_2)
+
+    num_class_1_in_split = int(math.ceil(len(class_1) / float(n_splits)))
+    num_class_2_in_split = int(math.ceil(len(class_2) / float(n_splits)))
+    str_splits = []
+    for i in range(n_splits - 1):
+        class_1_offset = num_class_1_in_split * i
+        class_2_offset = num_class_2_in_split * i
+        # print 'Start:', class_1_offset, 'End:', class_1_offset + num_class_1_in_split
+        curr_split = class_1[class_1_offset : class_1_offset + num_class_1_in_split] + class_2[class_2_offset : class_2_offset + num_class_2_in_split]
+        str_splits.append(curr_split)
+
+    if len(class_1) % n_splits == 0:
+        last_split = class_1[class_1_offset + num_class_1_in_split : ] + class_2[class_2_offset + num_class_2_in_split : ]
+        str_splits.append(last_split)
+    else:
+        last_split = class_1[class_1_offset + num_class_1_in_split : ] + class_2[class_2_offset + num_class_2_in_split : ]
+        str_splits.append(last_split)
+
+    return str_splits
+
+
 if __name__ == '__main__':
     """
     The driver method which takes in command line arguments, trains the neural network using backpropagation
@@ -108,18 +142,25 @@ if __name__ == '__main__':
     data, meta = arff.loadarff(training_data_file_path)
     data = np.asarray(data.tolist())
 
-    from sklearn.model_selection import StratifiedKFold
-    skf = StratifiedKFold(n_splits=num_folds, shuffle=True, random_state=7)
-
     predicted_confidences = np.zeros(len(data))
     fold_numbers = np.zeros(len(data), dtype=int)
     curr_fold_num = 0
-    for train_indexes, test_indexes in skf.split(data[:, :-1].astype(float), data[:, -1]):
+    strat_splits = stratified_splits(data[:, -1], num_folds)
+    for split_i in range(len(strat_splits)):
+        test_indexes = strat_splits[split_i]
+        train_indices = []
+        for split_j in range(len(strat_splits)):
+            if split_j != split_i:
+                train_indices += strat_splits[split_j]
+
+        train_indexes = train_indices
+
         fold_numbers[test_indexes] = curr_fold_num
         curr_fold_num += 1
 
         X_train, X_test = data[train_indexes, :-1].astype(float), data[test_indexes, :-1].astype(float)
         y_train, y_test = data[train_indexes, -1], data[test_indexes, -1]
+
         neural_net = NeuralNetwork(len(meta.names()) - 1, len(meta.names()) - 1, 1, learning_rate, num_epochs)
         y_train = np.array(y_train, ndmin=2).T
         for _ in range(neural_net.epoch):
