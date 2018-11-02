@@ -1,5 +1,6 @@
 import sys
 import pprint
+import collections
 import pandas as pd
 from scipy.io import arff
 
@@ -78,12 +79,34 @@ class NaiveBayes:
 
 
 class TAN:
-    def __init__(self, dataset, metadata):
+    def __init__(self, dataset, metadata, testset):
         self.dataset = dataset
         self.metadata = metadata
+        self.testset = testset
 
     def train(self):
         pass
+
+    def construct_mst(self, graph):
+        vertices_new = {'x1'}  # set(self.metadata.names()[0])
+        edges_new = collections.OrderedDict()
+        while len(vertices_new) != 4:  # len(self.metadata.names()) - 1:
+            candidate_src = ''
+            candidate_vertex = ''
+            edge_wt = -1
+            for old_vertex in vertices_new:
+                for vertex in ['x1', 'x2', 'x3', 'x4']:  # self.metadata.names()[-1]:
+                    if vertex not in vertices_new and graph[old_vertex][vertex] > edge_wt:
+                        edge_wt = graph[old_vertex][vertex]
+                        candidate_src = old_vertex
+                        candidate_vertex = vertex
+            # add the new vertex to V_new
+            vertices_new.add(candidate_vertex)
+            # add the new edge to E_new
+            if candidate_src not in edges_new:
+                edges_new[candidate_src] = collections.OrderedDict()
+            edges_new[candidate_src][candidate_vertex] = edge_wt
+        return edges_new
 
 
 def main():
@@ -94,7 +117,13 @@ def main():
     training_data_file_path = 'dataset/' + sys.argv[1]
     testing_data_file_path = 'dataset/' + sys.argv[2]
 
-    naive_bayes = True if sys.argv[3] == 'n' else False
+    if sys.argv[3] == 'n':
+        naive_bayes = True
+    elif sys.argv[3] == 't':
+        naive_bayes = False
+    else:
+        print 'Unknown arg at position 3. Please enter n for Naive Bayes or t for TAN'
+        sys.exit(1)
 
     dataset, metadata = import_data(training_data_file_path)
     testset = import_data(testing_data_file_path)[0]
@@ -106,7 +135,24 @@ def main():
         print 'Testing:'
         bayes.test()
     else:
-        TAN(dataset, metadata)
+        tan = TAN(dataset, metadata, testset)
+        graph = {'x1': {}, 'x2': {}, 'x3': {}, 'x4': {}}
+        graph['x1']['x2'] = 3
+        graph['x1']['x3'] = 6
+        graph['x1']['x4'] = 4
+
+        graph['x2']['x1'] = 3
+        graph['x2']['x3'] = 5
+        graph['x2']['x4'] = 2
+
+        graph['x3']['x1'] = 6
+        graph['x3']['x2'] = 5
+        graph['x3']['x4'] = 7
+
+        graph['x4']['x1'] = 4
+        graph['x4']['x2'] = 2
+        graph['x4']['x3'] = 7
+        print tan.construct_mst(graph)
 
 
 if __name__ == '__main__':
