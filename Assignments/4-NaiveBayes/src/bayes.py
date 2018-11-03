@@ -62,7 +62,14 @@ class NaiveBayes:
         # pprint.pprint(self.parameters)
         # pprint.pprint(self.prior_parameters)
 
+    def print_bayes_net(self):
+        for attrib in self.metadata.names():
+            if attrib != self.target_attribute:
+                print attrib, self.target_attribute,     # print "child parent" for all nodes
+        print
+
     def test(self):
+        correct_predictions = 0
         for _, row in self.testset.iterrows():
             predictions = {}
             for tgt_val in self.metadata[self.target_attribute][1]:
@@ -80,7 +87,12 @@ class NaiveBayes:
                     predicted_target = tgt_val
                     max_prob = predictions[tgt_val]
                 predictor_prior_prob += predictions[tgt_val]
-            print predicted_target, predictions[predicted_target] / predictor_prior_prob
+
+            if predicted_target == row[self.target_attribute]:
+                correct_predictions += 1
+            print predicted_target, row[self.target_attribute], '{:.12f}'.format(predictions[predicted_target] / predictor_prior_prob)
+        print
+        print correct_predictions
 
 
 class TAN:
@@ -99,35 +111,44 @@ class TAN:
         self.conditional_parameters = {}
 
     def train(self):
-        print 'Computing info gains for features'
         mutual_info_gains_mat = self.conditional_mutual_info_gain()
-        print 'Info gains for features computed'
 
         # Construct graph for prim input:
-        print 'Constructing graph'
         graph = {}
         for i in range(len(mutual_info_gains_mat)):
             graph[i] = {}
             for j in range(len(mutual_info_gains_mat[i])):
                 if i != j:
                     graph[i][j] = mutual_info_gains_mat[i][j]
-        print 'Graph constructed'
 
-        # pprint.pprint(graph)
-
-        print 'Constructing MST'
         maximal_spanning_tree = self.construct_mst_prims(graph)
-        print 'MST Constructed'
-        # pprint.pprint(maximal_spanning_tree)
 
-        print 'Computing conditional probabilities with TAN'
         self.compute_tan_conditional_parameters(maximal_spanning_tree)
         # pprint.pprint(self.conditional_parameters)
 
+        self.print_bayes_net(maximal_spanning_tree)
+
         self.test(maximal_spanning_tree)
 
+    def print_bayes_net(self, mst):
+        child_to_parent = {}
+        for parent in mst:
+            parent_attr = self.metadata.names()[parent]
+            for child in mst[parent]:
+                child_attr = self.metadata.names()[child]
+                child_to_parent[child_attr] = parent_attr
+        # print child_to_parent
+
+        for attrib in self.metadata.names():
+            if attrib != self.target_attribute:
+                if attrib not in child_to_parent:
+                    print attrib, self.target_attribute     # print "child parent" for all nodes
+                else:
+                    print attrib, child_to_parent[attrib], self.target_attribute,
+        print
+
     def test(self, mst):
-        print 'Testing TAN:'
+        correct_predictions = 0
         for _, row in self.testset.iterrows():
             predictions = {}
             for tgt_val in self.metadata[self.target_attribute][1]:
@@ -148,7 +169,12 @@ class TAN:
                     predicted_target = tgt_val
                     max_prob = predictions[tgt_val]
                 predictor_prior_prob += predictions[tgt_val]
-            print predicted_target, predictions[predicted_target] / predictor_prior_prob
+
+            if predicted_target == row[self.target_attribute]:
+                correct_predictions += 1
+            print predicted_target, row[self.target_attribute], '{:.12f}'.format(predictions[predicted_target] / predictor_prior_prob)
+        print
+        print correct_predictions
 
     def compute_tan_conditional_parameters(self, mst):
         for tgt_val in self.metadata[self.target_attribute][1]:
@@ -243,9 +269,8 @@ def main():
 
     if naive_bayes:
         bayes = NaiveBayes(dataset, metadata, testset)
-        print 'Training:'
         bayes.train()
-        print 'Testing:'
+        bayes.print_bayes_net()
         bayes.test()
     else:
         tan = TAN(dataset, metadata, testset)
