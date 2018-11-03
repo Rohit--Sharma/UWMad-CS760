@@ -65,7 +65,7 @@ class NaiveBayes:
     def print_bayes_net(self):
         for attrib in self.metadata.names():
             if attrib != self.target_attribute:
-                print attrib, self.target_attribute,     # print "child parent" for all nodes
+                print attrib, self.target_attribute     # print "child parent" for all nodes
         print
 
     def test(self):
@@ -144,7 +144,7 @@ class TAN:
                 if attrib not in child_to_parent:
                     print attrib, self.target_attribute     # print "child parent" for all nodes
                 else:
-                    print attrib, child_to_parent[attrib], self.target_attribute,
+                    print attrib, child_to_parent[attrib], self.target_attribute
         print
 
     def test(self, mst):
