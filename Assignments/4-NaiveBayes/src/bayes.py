@@ -93,6 +93,7 @@ class NaiveBayes:
             print predicted_target, row[self.target_attribute], '{:.12f}'.format(predictions[predicted_target] / predictor_prior_prob)
         print
         print correct_predictions
+        return correct_predictions
 
 
 class TAN:
@@ -105,6 +106,7 @@ class TAN:
 
         n_bayes = NaiveBayes(self.dataset, self.metadata, self.testset)
         n_bayes.train()
+        self.maximal_spanning_tree = None
         self.parameters = n_bayes.parameters
         self.prior_parameters = n_bayes.prior_parameters
         self.prior_parameters_parent = {}
@@ -121,20 +123,18 @@ class TAN:
                 if i != j:
                     graph[i][j] = mutual_info_gains_mat[i][j]
 
-        maximal_spanning_tree = self.construct_mst_prims(graph)
+        self.maximal_spanning_tree = self.construct_mst_prims(graph)
 
-        self.compute_tan_conditional_parameters(maximal_spanning_tree)
+        self.compute_tan_conditional_parameters()
         # pprint.pprint(self.conditional_parameters)
 
-        self.print_bayes_net(maximal_spanning_tree)
+        self.print_bayes_net()
 
-        self.test(maximal_spanning_tree)
-
-    def print_bayes_net(self, mst):
+    def print_bayes_net(self):
         child_to_parent = {}
-        for parent in mst:
+        for parent in self.maximal_spanning_tree:
             parent_attr = self.metadata.names()[parent]
-            for child in mst[parent]:
+            for child in self.maximal_spanning_tree[parent]:
                 child_attr = self.metadata.names()[child]
                 child_to_parent[child_attr] = parent_attr
         # print child_to_parent
@@ -147,16 +147,16 @@ class TAN:
                     print attrib, child_to_parent[attrib], self.target_attribute
         print
 
-    def test(self, mst):
+    def test(self):
         correct_predictions = 0
         for _, row in self.testset.iterrows():
             predictions = {}
             for tgt_val in self.metadata[self.target_attribute][1]:
                 predictions[tgt_val] = self.prior_parameters[tgt_val] * self.parameters[tgt_val][self.metadata.names()[0]][row[self.metadata.names()[0]]]
 
-            for parent in mst:
+            for parent in self.maximal_spanning_tree:
                 parent_attr = self.metadata.names()[parent]
-                for child in mst[parent]:
+                for child in self.maximal_spanning_tree[parent]:
                     child_attr = self.metadata.names()[child]
                     for tgt_val in self.metadata[self.target_attribute][1]:
                         predictions[tgt_val] *= self.conditional_parameters[tgt_val][parent_attr][row[parent_attr]][child_attr][row[child_attr]]
@@ -175,20 +175,21 @@ class TAN:
             print predicted_target, row[self.target_attribute], '{:.12f}'.format(predictions[predicted_target] / predictor_prior_prob)
         print
         print correct_predictions
+        return correct_predictions
 
-    def compute_tan_conditional_parameters(self, mst):
+    def compute_tan_conditional_parameters(self):
         for tgt_val in self.metadata[self.target_attribute][1]:
             dataset_gvn_tgt_val = self.dataset[self.dataset[self.target_attribute] == tgt_val]
             self.conditional_parameters[tgt_val] = {}
             self.prior_parameters_parent[tgt_val] = {}
-            for parent in mst:
+            for parent in self.maximal_spanning_tree:
                 parent_attr = self.metadata.names()[parent]
                 if parent_attr not in self.conditional_parameters[tgt_val]:
                     self.conditional_parameters[tgt_val][parent_attr] = {}
                 for parent_val in self.metadata[parent_attr][1]:
                     dataset_gvn_tgt_parent_vals = dataset_gvn_tgt_val[dataset_gvn_tgt_val[parent_attr] == parent_val]
                     self.conditional_parameters[tgt_val][parent_attr][parent_val] = {}
-                    for child in mst[parent]:
+                    for child in self.maximal_spanning_tree[parent]:
                         child_attr = self.metadata.names()[child]
                         if child_attr not in self.conditional_parameters[tgt_val][parent_attr][parent_val]:
                             self.conditional_parameters[tgt_val][parent_attr][parent_val][child_attr] = {}
@@ -275,6 +276,7 @@ def main():
     else:
         tan = TAN(dataset, metadata, testset)
         tan.train()
+        tan.test()
 
 
 if __name__ == '__main__':
