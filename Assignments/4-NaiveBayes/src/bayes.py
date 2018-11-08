@@ -90,7 +90,7 @@ class NaiveBayes:
 
             if predicted_target == row[self.target_attribute]:
                 correct_predictions += 1
-            print predicted_target, row[self.target_attribute], '{:.12f}'.format(predictions[predicted_target] / predictor_prior_prob)
+            print predicted_target.strip('\''), row[self.target_attribute].strip('\''), '{:.12f}'.format(predictions[predicted_target] / predictor_prior_prob)
         print
         print correct_predictions
         return correct_predictions
@@ -172,7 +172,7 @@ class TAN:
 
             if predicted_target == row[self.target_attribute]:
                 correct_predictions += 1
-            print predicted_target, row[self.target_attribute], '{:.12f}'.format(predictions[predicted_target] / predictor_prior_prob)
+            print predicted_target.strip('\''), row[self.target_attribute].strip('\''), '{:.12f}'.format(predictions[predicted_target] / predictor_prior_prob)
         print
         print correct_predictions
         return correct_predictions
