@@ -1,2 +1,2 @@
 # UWMad-CS760
-Assignments for CS760
+Assignments and Project for CS760
